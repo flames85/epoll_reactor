@@ -18,24 +18,36 @@
 class FileFDEventHander;
 
 FileFDEventHander* g_fHandler = NULL;
+LTReactor * g_Reactor = NULL;
 
 
 //////////////post的callback函数////////////////
 typedef void (*p_callback)(const std::string &msg);
 
+void logic(const std::string &msg)
+{
+    if("stop" == msg)
+    {
+        g_Reactor->Stop();
+    }
+}
+
 void callback1(const std::string &msg)
 {
     printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
+    logic(msg);
 }
 
 void callback2(const std::string &msg)
 {
     printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
+    logic(msg);
 }
 
 void callback3(const std::string &msg)
 {
     printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
+    logic(msg);
 }
 //////////////////////////////
 
@@ -92,8 +104,9 @@ private:
 class TimerEventHandler_test: public TimerEventHanderBase
 {
 public:
-    explicit TimerEventHandler_test(Reactor * pReactor) :
-        TimerEventHanderBase(pReactor)
+    explicit TimerEventHandler_test(Reactor * pReactor, const std::string &timerID) :
+        TimerEventHanderBase(pReactor),
+        m_timerID(timerID)
     {
 
     }
@@ -102,8 +115,13 @@ public:
         memset(&t, 0, sizeof(t));
         gettimeofday(&t, NULL);
         printf("CALLBACK: timeOut: [%u:%u] \n", (unsigned int)t.tv_sec, (unsigned int)t.tv_usec);
-        g_fHandler->post(callback3, "i am in onTimeout!");
+        if("3" == m_timerID)
+            g_fHandler->post(callback3, "stop");
+        else
+            g_fHandler->post(callback3, "i am in " + m_timerID + " OnTimeOut");
     }
+    
+    std::string m_timerID;
 };
 
 
@@ -134,12 +152,12 @@ public:
 int main()
 {
     // reactor对象
-    LTReactor * pReactor = new LTReactor;
-    pReactor->Init();
+    g_Reactor = new LTReactor;
+    g_Reactor->Init();
     
     // 1. 测试异步tcpserver的socket通信
     TcpDataDecoder_echo_test* socket = new TcpDataDecoder_echo_test;
-    TcpServerEventHandler server("127.0.0.1", 12345, socket, 0, pReactor);
+    TcpServerEventHandler server("127.0.0.1", 12345, socket, 0, g_Reactor);
     if (0 != server.OnListen()) {
         return -1;
     }
@@ -151,22 +169,24 @@ int main()
         return -2;
     }
     int fd = open(path, O_RDWR);;
-    g_fHandler = new FileFDEventHander(fd, pReactor);
+    g_fHandler = new FileFDEventHander(fd, g_Reactor);
     g_fHandler->post(callback1, "i am in main.");
     g_fHandler->post(callback2, "i am in main too.");
 
     // 3. 测试异步定时器
-    TimerEventHandler_test* tHandler1 = new TimerEventHandler_test(pReactor);
+    TimerEventHandler_test* tHandler1 = new TimerEventHandler_test(g_Reactor, "1");
     tHandler1->RegisterTimer(2000, false);
-    TimerEventHandler_test* tHandler2 = new TimerEventHandler_test(pReactor);
+    TimerEventHandler_test* tHandler2 = new TimerEventHandler_test(g_Reactor, "2");
     tHandler2->RegisterTimer(4000, false);
-    TimerEventHandler_test* tHandler3 = new TimerEventHandler_test(pReactor);
+    TimerEventHandler_test* tHandler3 = new TimerEventHandler_test(g_Reactor, "3");
     tHandler3->RegisterTimer(6000, false);
-    TimerEventHandler_test* tHandler4 = new TimerEventHandler_test(pReactor);
+    TimerEventHandler_test* tHandler4 = new TimerEventHandler_test(g_Reactor, "4");
     tHandler4->RegisterTimer(16000, false);
     
     // 运行
-    pReactor->Run();
+    g_Reactor->Run();
+    
+    printf("process exit");
     
     return 0;
 }

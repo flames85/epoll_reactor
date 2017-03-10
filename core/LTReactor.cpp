@@ -52,12 +52,13 @@ bool LTReactor::Run() {
         // 要停止epoll.
         if (m_bRunning == false)
         {
-            timeval now;
-            gettimeofday(&now, NULL); //获取当前时间
-            if (timercmp(&now, &m_stoptime, >))
-            {
-                break;
-            }
+//            timeval now;
+//            gettimeofday(&now, NULL); //获取当前时间
+//            if (timercmp(&now, &m_stoptime, >))
+//            {
+//                break;
+//            }
+            break;
         }
         // epoll 出错
         if (nfds == -1)
@@ -109,10 +110,10 @@ bool LTReactor::Run() {
 bool LTReactor::Stop() {
     m_bRunning = false;
     
-    timeval val, now;
-    val.tv_usec = 50 * 1000; //50ms后停止
-    gettimeofday(&now, NULL);
-    timeradd(&val, &now, &m_stoptime);
+//    timeval val, now;
+//    val.tv_usec = 50 * 1000; //50ms后停止
+//    gettimeofday(&now, NULL);
+//    timeradd(&val, &now, &m_stoptime);
     return true;
 }
 // 注册读事件,
