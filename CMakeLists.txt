@@ -26,4 +26,10 @@ set(SOURCE_FILES main.cpp
         tcpserver/TcpServerBase.cpp
         tcpserver/TcpServerBase.h)
 
-add_executable(epoll_reactor ${SOURCE_FILES})
+add_executable(epoll_reactor
+        ${SOURCE_FILES})
+
+
+target_link_libraries(epoll_reactor
+        pthread
+        )

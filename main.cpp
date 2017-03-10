@@ -11,6 +11,9 @@
 #include "core/LTReactor.h"
 #include "tcpserver/SocketDataDecoderBase.h"
 #include "tcpserver/TcpServerBase.h"
+// tid
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
 
 // 基础代码源自 http://blog.chinaunix.net/uid-26975042-id-3979456.html
 
@@ -24,30 +27,30 @@ LTReactor * g_Reactor = NULL;
 //////////////post的callback函数////////////////
 typedef void (*p_callback)(const std::string &msg);
 
-void logic(const std::string &msg)
+void callbackStop(const std::string &msg)
 {
-    if("stop" == msg)
-    {
-        g_Reactor->Stop();
-    }
+    printf("[tid:%ld] [fun:%s][msg:%s]\n", gettid(), __func__, msg.c_str());
+    g_Reactor->Stop();
 }
 
 void callback1(const std::string &msg)
 {
-    printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
-    logic(msg);
+    printf("[tid:%ld] [fun:%s][msg:%s]\n", gettid(), __func__, msg.c_str());
 }
 
 void callback2(const std::string &msg)
 {
-    printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
-    logic(msg);
+    printf("[tid:%ld] [fun:%s][msg:%s]\n", gettid(), __func__, msg.c_str());
 }
 
 void callback3(const std::string &msg)
 {
-    printf("CALLBACK: [fun:%s][msg:%s]\n", __func__, msg.c_str());
-    logic(msg);
+    printf("[tid:%ld] [fun:%s][msg:%s]\n", gettid(), __func__, msg.c_str());
+}
+
+void callback4(const std::string &msg)
+{
+    printf("[tid:%ld] [fun:%s][msg:%s]\n", gettid(), __func__, msg.c_str());
 }
 //////////////////////////////
 
@@ -111,19 +114,12 @@ public:
 
     }
     void OnTimeOut() {
-        timeval t;
-        memset(&t, 0, sizeof(t));
-        gettimeofday(&t, NULL);
-        printf("CALLBACK: timeOut: [%u:%u] \n", (unsigned int)t.tv_sec, (unsigned int)t.tv_usec);
-        if("3" == m_timerID)
-            g_fHandler->post(callback3, "stop");
-        else
-            g_fHandler->post(callback3, "i am in " + m_timerID + " OnTimeOut");
+//        printf("[tid:%ld] [fun:%s]\n", gettid(), __func__);
+        g_fHandler->post(callback3, "I am in " + m_timerID + " OnTimeOut");
     }
     
     std::string m_timerID;
 };
-
 
 /* *********************
  * 处理客户端发过来的数据
@@ -139,7 +135,7 @@ public:
         // 这个地方，将客户端的数据回写
         if (0 == pSocket->RegisterWriteEvent())
         {
-            printf("CALLBACK [%p]recv:%s\n", pSocket, buf);
+            printf("[tid:%ld] [fun:%s][socket:%p] [recv:%s]\n", gettid(), __func__, pSocket, buf);
             write(pSocket->GetFD(), buf, buf_len);
             pSocket->UnRegisterWriteEvent();
         }
@@ -148,6 +144,19 @@ public:
     }
 };
 
+void *childThread(void *arg)
+{
+    printf("[tid:%ld] [fun:%s] <--- new thread\n", gettid(), __func__);
+    
+    for(int i = 0; i < 5; ++i)
+    {
+        g_fHandler->post(callback4, "I am in childThread");
+        sleep(5);
+    }
+    
+    g_fHandler->post(callbackStop, "bye");
+    return NULL;
+}
 
 int main()
 {
@@ -159,19 +168,29 @@ int main()
     TcpDataDecoder_echo_test* socket = new TcpDataDecoder_echo_test;
     TcpServerEventHandler server("127.0.0.1", 12345, socket, 0, g_Reactor);
     if (0 != server.OnListen()) {
-        return -1;
+        return -2;
     }
     
     // 2. 测试用pipe来发送post消息
     const char* path = "/home/shaoqi/test.txt";
     if(0 == mkfifo(path, 0777)) // 创建一个pipe.
     {
-        return -2;
+        return -3;
     }
     int fd = open(path, O_RDWR);;
     g_fHandler = new FileFDEventHander(fd, g_Reactor);
-    g_fHandler->post(callback1, "i am in main.");
-    g_fHandler->post(callback2, "i am in main too.");
+    // 主线程中post
+    g_fHandler->post(callback1, "I am in main");
+    g_fHandler->post(callback2, "I am in main too");
+    
+    // 子线程中post
+    pthread_t ntid;
+    int err = pthread_create(&ntid, NULL, childThread, NULL);
+    if (err != 0)
+    {
+        printf("can't create thread: %s\n", strerror(err));
+        return -1;
+    }
 
     // 3. 测试异步定时器
     TimerEventHandler_test* tHandler1 = new TimerEventHandler_test(g_Reactor, "1");
@@ -182,7 +201,7 @@ int main()
     tHandler3->RegisterTimer(6000, false);
     TimerEventHandler_test* tHandler4 = new TimerEventHandler_test(g_Reactor, "4");
     tHandler4->RegisterTimer(16000, false);
-    
+
     // 运行
     g_Reactor->Run();
     
