@@ -161,9 +161,9 @@ int main()
     TimerEventHandler_test* tHandler2 = new TimerEventHandler_test(pReactor);
     tHandler2->RegisterTimer(4000, false);
     TimerEventHandler_test* tHandler3 = new TimerEventHandler_test(pReactor);
-    tHandler3->RegisterTimer(8000, false);
+    tHandler3->RegisterTimer(6000, false);
     TimerEventHandler_test* tHandler4 = new TimerEventHandler_test(pReactor);
-    tHandler4->RegisterTimer(10000, false);
+    tHandler4->RegisterTimer(16000, false);
     
     // 运行
     pReactor->Run();

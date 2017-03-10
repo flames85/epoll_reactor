@@ -26,7 +26,7 @@ public:
 public:
     void AddTimerEventHandler(TimerEventHanderBase* pHandler);
     void DelTimerEventHandler(TimerEventHanderBase* pHandler);
-    void ScanTimer();
+    int ScanTimer();
 private:
     struct FDHandler
     {

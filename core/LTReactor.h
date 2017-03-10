@@ -55,7 +55,7 @@ public:
     int RegisterTimer(TimerEventHanderBase* pBase);
     int UnRegisterTimer(TimerEventHanderBase* pBase);
 private:
-    void ScanTimer();
+    int ScanTimer();
 private:
     int             m_epfd; //epoll's fd
     bool            m_bRunning;

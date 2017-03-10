@@ -36,12 +36,19 @@ bool LTReactor::Init() {
 bool LTReactor::Run() {
     struct epoll_event events[MAX_EPOLL_EVENTS_SIZE];
     int nfds = 0; //返回被触发的事件的个数
+    int timeoutMilliseconds = 0;
     while (true)
     {
+        // 处理定时器事件, 返回下次超时的时间
+        timeoutMilliseconds = ScanTimer();
+//        printf("下次超时时间[%d]毫秒后\n", timeoutMilliseconds);
         // 需要优化成下次超时的时间
         // 超时时间，若m_bRunning，立即返回；否则100ms，即0.1s. 实际上，epoll_wait，只能够精确到毫秒(1/1000)
-        nfds = epoll_wait(m_epfd, events, sizeof(events) / sizeof(events[0]),
-                          m_bRunning ? 100 : 1);
+        nfds = epoll_wait(m_epfd,
+                          events,
+                          sizeof(events) / sizeof(events[0]),
+                          m_bRunning ? timeoutMilliseconds : 0);
+        
         // 要停止epoll.
         if (m_bRunning == false)
         {
@@ -88,8 +95,7 @@ bool LTReactor::Run() {
                 pBase->Close();
             }
         }
-        // 处理定时器事件
-        ScanTimer();
+
         // 处理idle事件
     } // end of while
     
@@ -220,6 +226,6 @@ int LTReactor::UnRegisterTimer(TimerEventHanderBase* pBase) {
     return 0;
 }
 // 扫描，看是否有定时器的时间到了
-void LTReactor::ScanTimer() {
-    m_handlerSet.ScanTimer();
+int LTReactor::ScanTimer() {
+    return m_handlerSet.ScanTimer();
 }
