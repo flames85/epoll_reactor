@@ -1,6 +1,9 @@
 # epoll_reactor
-用epoll实现了异步tcpserver+异步post(基于管道)+异步timer的框架.仅供学习之用.
+用epoll实现了一个异步框架, 较为零散和简陋. 仅供学习之用.包含的功能有:
 
++ 异步tcpserver(用epoll监听socket)
++ 异步post(用epoll监听pipe)
++ 异步timer的框架(用epoll的超时机制).
 
 ## 标准的经典的 Reactor模式:
 
