@@ -82,7 +82,6 @@ public:
             p.first(p.second);
             m_callbackPairList.erase(it++);
         }
-        m_callbackPairList.clear();
         this->UnRegisterReadEvent();
     }
     // 写被触发时，调用该函数
